@@ -1,0 +1,149 @@
+#!/bin/bash
+# Abort if any command returns an error value
+set -e
+
+# Debug variable - Values "on" or "off"
+_DEBUG="off"
+
+# Setup some variables so we are not duping the paths
+PATH_LIB="/usr/share"
+PATH_APIDOC="/pve-docs/api-viewer/apidoc.js"
+PATH_PVEMANAGER="/pve-manager/js/pvemanagerlib.js"
+PATH_TRUENAS="/perl5/PVE/Storage/LunCmd/TrueNAS.pm"
+PATH_CLIENT="/perl5/TrueNAS"
+PATH_ZFSPLUGIN="/perl5/PVE/Storage/ZFSPlugin.pm"
+GIT_REPO="https://git.techg.ca/boomshankerx/"
+GIT_LOCAL_REPO_PATH="/usr/local/src/"
+GIT_REPO_NAME="proxmox-truenas"
+GIT_BRANCH="master"
+RESTART_PVE_SERVICES="no"
+
+# This script is called as the last step of the installation of the
+# package.  All the package's files are in place, dpkg has already
+# done its automatic conffile handling, and all the packages we depend
+# of are already fully installed and configured.
+[ "${_DEBUG}" == "on" ] && PATCH_ARGS="--verbose -b --ignore-whitespace" || PATCH_ARGS="-s -b --ignore-whitespace"
+
+# Get some version numbers of the Proxmox packages
+# libpve_storage_perl_ver=$(dpkg-query --showformat='${Version}' --show libpve-storage-perl)
+# pve_docs_ver=$(dpkg-query --showformat='${Version}' --show pve-docs)
+# pve_manager_ver=$(dpkg-query --showformat='${Version}' --show pve-manager)
+proxmox_ve_ver=$(dpkg-query --showformat='${Version}' --show proxmox-ve)
+major_ver=${proxmox_ve_ver%%.*}
+
+[ "${_DEBUG}" == "on" ] && echo "Proxmox Version $proxmox_ve_ver"
+[ "${_DEBUG}" == "on" ] && echo "Proxmox Major Version $major_ver"
+
+# Test if the truenas-proxmox repo has been downloaded. If not clone it, else
+# update the repo with a pull.
+if test ! -e ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}; then
+  [ "${_DEBUG}" == "on" ] && echo "Cloning proxmox-truenas github repo"
+  git -C ${GIT_LOCAL_REPO_PATH} clone ${GIT_REPO}${GIT_REPO_NAME}.git
+else
+  [ "${_DEBUG}" == "on" ] && echo "Pulling proxmox-truenas github repo"
+  git -C ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME} pull
+fi
+
+# What is the 'postinst' script doing...
+[ "$_DEBUG" == "on" ] && echo "Initiating '$1' with arg '$2'"
+case "$1" in
+  triggered)
+    # I am not sure why I did this, but I must have had a reason.
+    if [ $(echo $2 | grep -c "apidoc") -eq 0 ] && [ $(cat ${PATH_LIB}${PATH_APIDOC} | grep -c "truenas") -eq 0 ]; then
+      [ "${_DEBUG}" == "on" ] && echo "Update needed for pve-docs"
+      paths="$2 ${PATH_APIDOC}"
+    else
+      [ "${_DEBUG}" == "on" ] && echo "pve-docs check"
+      paths="$2"
+    fi
+
+    # Patch PVE files and install plugin
+    for fullpath in $paths
+    do
+      filename=$(basename -- "$fullpath")
+      filename="${filename%.*}"
+      echo "Found $fullpath in arguments. Triggering patch of $fullpath"
+      case "$filename" in
+        ZFSPlugin)
+          patch ${PATCH_ARGS} ${PATH_LIB}${PATH_ZFSPLUGIN} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_ZFSPLUGIN}.patch &> /dev/null
+          ;;
+        pvemanagerlib)
+          patch ${PATCH_ARGS} ${PATH_LIB}${PATH_PVEMANAGER} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_PVEMANAGER}.patch &> /dev/null
+          ;;
+        apidoc)
+          patch ${PATCH_ARGS} ${PATH_LIB}${PATH_APIDOC} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_APIDOC}.patch &> /dev/null
+          ;;
+      esac
+    done
+    [ "${_DEBUG}" == "on" ] && echo "Installing ${PATH_LIB}${PATH_TRUENAS}"
+    cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_TRUENAS} ${PATH_LIB}${PATH_TRUENAS}
+    cp -r ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_CLIENT} ${PATH_LIB}
+
+    exit 0
+    ;;
+
+  configure)
+    # Configure this package.  If the package must prompt the user for
+    # information, do it here.
+    echo "Configuring ${GIT_REPO_NAME} $2"
+
+    # Check to see what branch we are on and change if necessary.
+    GIT_BRANCH_CURRENT=$(git -C ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME} rev-parse --abbrev-ref HEAD)
+    if [ "${GIT_BRANCH_CURRENT}" != "${GIT_BRANCH}" ]; then
+      git -C ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME} checkout ${GIT_BRANCH}
+    fi
+
+    # Check to see if the system was already patched manually or by another means.
+    # Check /usr/share/perl5/PVE/Storage/ZFSPlugin.pm for 'truenas'
+    if [ $(cat ${PATH_LIB}${PATH_ZFSPLUGIN} | grep -c "truenas") -eq 0 ]; then
+      [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${PATH_ZFSPLUGIN}"
+      patch ${PATCH_ARGS} ${PATH_LIB}${PATH_ZFSPLUGIN} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_ZFSPLUGIN}.patch &> /dev/null
+      RESTART_PVE_SERVICES="yes"
+    fi
+
+    # Check /usr/share/pve-manager/js/pvemanagerlib.js for 'truenas'
+    if [ $(cat ${PATH_LIB}${PATH_PVEMANAGER} | grep -c "truenas") -eq 0 ]; then
+      [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${PATH_PVEMANAGER}"
+      patch ${PATCH_ARGS} ${PATH_LIB}${PATH_PVEMANAGER} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_PVEMANAGER}.patch &> /dev/null
+      RESTART_PVE_SERVICES="yes"
+    fi
+
+    # Check /usr/share/pve-docs/api-viewer/apidoc.js for 'truenas'
+    if [ $(cat ${PATH_LIB}${PATH_APIDOC} | grep -c "truenas") -eq 0 ]; then
+      [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${PATH_APIDOC}"
+      patch ${PATCH_ARGS} ${PATH_LIB}${PATH_APIDOC} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_APIDOC}.patch &> /dev/null
+      RESTART_PVE_SERVICES="yes"
+    fi
+
+    # Check /usr/share/perl5/PVE/Storage/LunCmd/TrueNAS.pm
+    if test ! -e ${PATH_LIB}${PATH_TRUENAS}; then
+      [ "${_DEBUG}" == "on" ] && echo "Installing ${PATH_LIB}${PATH_TRUENAS}"
+      cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_TRUENAS} ${PATH_LIB}${PATH_TRUENAS}
+      RESTART_PVE_SERVICES="yes"
+    fi
+
+    # Restart the necessary Proxmox VE Services if we changed any files above.
+    if [ "${RESTART_PVE_SERVICES}" == "yes" ]; then
+      cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_TRUENAS} ${PATH_LIB}${PATH_TRUENAS}
+      cp -r ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_CLIENT} ${PATH_LIB}
+      echo "Restarting pvedaemon..."
+      pvedaemon restart
+      echo "Restarting pveproxy..."
+      pveproxy restart
+      echo "Restarting pvestatd..."
+      pvestatd restart
+      echo "Restarting pvescheduler..."
+      systemctl restart pvescheduler.service
+    fi
+    exit 0
+    ;;
+
+  abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+  *) echo "$0: didn't understand being called with \`$1'" 1>&2
+     exit 0
+     ;;
+esac
+
+exit 0

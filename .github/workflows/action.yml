@@ -1,0 +1,72 @@
+# action.yml
+name: TrueNAS Plugin for Proxmox VE Packager.
+on:
+  repository_dispatch:
+    types: [build_push]
+env:
+  DEB_PACKAGE_NAME: 'proxmox-truenas'
+  DEB_DISTRO_VERSION: 'any-version'
+jobs:
+  Build_proxmox-truenas_Debian_package:
+    runs-on: ubuntu-latest
+    steps:
+      # Set variables for a `feature` branch push or merge
+      - name: Set our variables for the feature branch.
+        if: contains(github.event.client_payload.ref, 'feature_')
+        run: |
+          echo "DEB_PACKAGE_VERSION=2.3.0-0-alpha-2" >> $GITHUB_ENV
+          echo "gitBranch=development" >> $GITHUB_ENV
+          echo "DEB_REPO_COMPONENT=development" >> $GITHUB_ENV
+          echo "ARTIFACT_REPO_NAME=truenas-proxmox-snapshots" >> $GITHUB_ENV
+      # Set variables for a `ng` branch push or merge
+      - name: Set our variables for the ng branch for the development repo.
+        if: contains(github.event.client_payload.ref, 'ng')
+        run: |
+          echo "DEB_PACKAGE_VERSION=3.0.0-0-alpha1" >> $GITHUB_ENV
+          echo "GIBHUB_BRANCH=development" >> $GITHUB_ENV
+          echo "DEB_REPO_COMPONENT=development" >> $GITHUB_ENV
+          echo "ARTIFACT_REPO_NAME=truenas-proxmox-snapshots" >> $GITHUB_ENV
+      # Set variables for a `master` branch push or merge
+      - name: Set our variables for the master branch for the testing repo.
+        if: contains(github.event.client_payload.ref, 'master')
+        run: |
+          echo "DEB_PACKAGE_VERSION=2.3.0-0-beta2" >> $GITHUB_ENV
+          echo "gitBranch=testing" >> $GITHUB_ENV
+          echo "DEB_REPO_COMPONENT=testing" >> $GITHUB_ENV
+          echo "ARTIFACT_REPO_NAME=truenas-proxmox-testing" >> $GITHUB_ENV
+      # Set variables for a `2.0` branch push or merge
+      - name: Set our variables for the 2.0 branch for the stable repo.
+        if: contains(github.event.client_payload.ref, '2.0')
+        run: |
+          echo "DEB_PACKAGE_VERSION=2.2.0-1" >> $GITHUB_ENV
+          echo "gitBranch=stable/v2.0" >> $GITHUB_ENV
+          echo "DEB_REPO_COMPONENT=main" >> $GITHUB_ENV
+          echo "ARTIFACT_REPO_NAME=truenas-proxmox" >> $GITHUB_ENV
+      # Need `dpkg` installed to build the deb package.
+      - name: Make sure dpkg is installed.
+        run: sudo apt-get install dpkg
+      # Get the `proxmox-truenas-package` repo
+      - name: Checkout proxmox-truenas-packer.
+        uses: actions/checkout@v4
+      # Set the correct file permissions for proper package execution.
+      - name: Change permissions on the `post` files.
+        run: |
+          sudo chmod 0755 ${{ env.gitBranch }}/DEBIAN/postinst
+          sudo chmod 0755 ${{ env.gitBranch }}/DEBIAN/postrm
+      # Create the package.
+      - name: Create the truenas-proxmox Debian Pacakge.
+        run: |
+          sudo dpkg-deb -Zgzip --build ${{ env.gitBranch }} ${{ env.DEB_PACKAGE_NAME }}_${{ env.DEB_PACKAGE_VERSION }}_all.deb
+      # Upload the package to Cloudsmit using their Marketplace action.
+      - name: Push truenas-proxmox package to Cloudsmith
+        id: push
+        uses: cloudsmith-io/action@master
+        with:
+          api-key: ${{ secrets.CLOUDSMITH_API_KEY }}
+          command: "push"
+          format: "deb"
+          owner: "ksatechnologies"
+          repo: ${{ env.ARTIFACT_REPO_NAME }}
+          distro: "debian"
+          release: ${{ env.DEB_DISTRO_VERSION }}
+          file: ${{ env.DEB_PACKAGE_NAME }}_${{ env.DEB_PACKAGE_VERSION }}_all.deb
