@@ -3,7 +3,7 @@ Section: perl
 Priority: optional
 Maintainer: TechG Solutions <lorne@techgsolutions.com>
 Uploaders: Lorne Guse <lorne@techgsolutions.com>
-Depends: git, libio-socket-ip-perl, libio-socket-ssl-perl, libjson-rpc-perl, liblog-any-perl, libprotocol-websocket-perl
+Depends: git, libio-socket-ip-perl, libio-socket-ssl-perl, libjson-rpc-common-perl, liblog-any-perl, libprotocol-websocket-perl
 Standards-Version: 4.5.0
 Vcs-Git: https://github.com/boomshankerx/proxmox-truenas.git
 Vcs-Browser: https://github.com/boomshankerx/proxmox-truenas.git

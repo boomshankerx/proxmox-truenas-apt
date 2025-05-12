@@ -77,7 +77,7 @@ case "$1" in
     done
     [ "${_DEBUG}" == "on" ] && echo "Installing ${PATH_LIB}${FILE_TRUENAS}"
     cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_TRUENAS} ${PATH_LIB}${FILE_TRUENAS}
-    cp -r ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_CLIENT} ${PATH_LIB}
+    cp -r ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_CLIENT} ${PATH_LIB}/perl5
 
     exit 0
     ;;
@@ -119,13 +119,12 @@ case "$1" in
     if test ! -e ${PATH_LIB}${FILE_TRUENAS}; then
       [ "${_DEBUG}" == "on" ] && echo "Installing ${PATH_LIB}${FILE_TRUENAS}"
       cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_TRUENAS} ${PATH_LIB}${FILE_TRUENAS}
+      cp -r ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_CLIENT} ${PATH_LIB}/perl5
       RESTART_PVE_SERVICES="yes"
     fi
 
     # Restart the necessary Proxmox VE Services if we changed any files above.
     if [ "${RESTART_PVE_SERVICES}" == "yes" ]; then
-      cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_TRUENAS} ${PATH_LIB}${FILE_TRUENAS}
-      cp -r ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_CLIENT} ${PATH_LIB}
       echo "Restarting pvedaemon..."
       pvedaemon restart
       echo "Restarting pveproxy..."

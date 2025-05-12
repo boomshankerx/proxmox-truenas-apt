@@ -40,3 +40,11 @@ jobs:
       - name: Build DEB package
         run: |
           sudo dpkg-deb -Zgzip --build ${{ env.gitBranch }} /artifacts/${{ env.DEB_PACKAGE_NAME }}_${{ env.DEB_PACKAGE_VERSION }}_all.deb
+
+      - name: SCP artifact to remote server
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "$SSH_KEY" > /tmp/id_rsa
+          chmod 600 /tmp/id_rsa
+          scp -i /tmp/id_rsa -o StrictHostKeyChecking=no //artifacts/${{ env.DEB_PACKAGE_NAME }}_${{ env.DEB_PACKAGE_VERSION }}_all.deb root@192.168.11.188:/root/
