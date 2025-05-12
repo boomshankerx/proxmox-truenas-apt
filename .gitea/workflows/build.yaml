@@ -9,7 +9,7 @@ env:
   gitBranch: 'testing'
   DEB_REPO_COMPONENT: 'testing'
   ARTIFACT_REPO_NAME: 'truenas-proxmox-testing'
-  GITEA_API_URL: 'https://gitea.example.com/api/v1'
+  GITEA_API_URL: 'https://git.techg.ca/api/v1'
   GITEA_REPO_OWNER: 'boomshankerx'
   GITEA_REPO_NAME: 'proxmox-truenas-packer'
 

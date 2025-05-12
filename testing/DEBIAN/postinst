@@ -6,16 +6,16 @@ set -e
 _DEBUG="off"
 
 # Setup some variables so we are not duping the paths
-PATH_LIB="/usr/share"
-PATH_APIDOC="/pve-docs/api-viewer/apidoc.js"
-PATH_PVEMANAGER="/pve-manager/js/pvemanagerlib.js"
-PATH_TRUENAS="/perl5/PVE/Storage/LunCmd/TrueNAS.pm"
-PATH_CLIENT="/perl5/TrueNAS"
-PATH_ZFSPLUGIN="/perl5/PVE/Storage/ZFSPlugin.pm"
-GIT_REPO="https://git.techg.ca/boomshankerx/"
+FILE_APIDOC="/pve-docs/api-viewer/apidoc.js"
+FILE_PVEMANAGER="/pve-manager/js/pvemanagerlib.js"
+FILE_TRUENAS="/perl5/PVE/Storage/LunCmd/TrueNAS.pm"
+FILE_ZFSPLUGIN="/perl5/PVE/Storage/ZFSPlugin.pm"
+GIT_BRANCH="main"
 GIT_LOCAL_REPO_PATH="/usr/local/src/"
 GIT_REPO_NAME="proxmox-truenas"
-GIT_BRANCH="master"
+GIT_REPO="https://git.techg.ca/boomshankerx/"
+PATH_CLIENT="/perl5/TrueNAS"
+PATH_LIB="/usr/share"
 RESTART_PVE_SERVICES="no"
 
 # This script is called as the last step of the installation of the
@@ -49,9 +49,9 @@ fi
 case "$1" in
   triggered)
     # I am not sure why I did this, but I must have had a reason.
-    if [ $(echo $2 | grep -c "apidoc") -eq 0 ] && [ $(cat ${PATH_LIB}${PATH_APIDOC} | grep -c "truenas") -eq 0 ]; then
+    if [ $(echo $2 | grep -c "apidoc") -eq 0 ] && [ $(cat ${PATH_LIB}${FILE_APIDOC} | grep -c "truenas") -eq 0 ]; then
       [ "${_DEBUG}" == "on" ] && echo "Update needed for pve-docs"
-      paths="$2 ${PATH_APIDOC}"
+      paths="$2 ${FILE_APIDOC}"
     else
       [ "${_DEBUG}" == "on" ] && echo "pve-docs check"
       paths="$2"
@@ -65,18 +65,18 @@ case "$1" in
       echo "Found $fullpath in arguments. Triggering patch of $fullpath"
       case "$filename" in
         ZFSPlugin)
-          patch ${PATCH_ARGS} ${PATH_LIB}${PATH_ZFSPLUGIN} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_ZFSPLUGIN}.patch &> /dev/null
+          patch ${PATCH_ARGS} ${PATH_LIB}${FILE_ZFSPLUGIN} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_ZFSPLUGIN}.patch &> /dev/null
           ;;
         pvemanagerlib)
-          patch ${PATCH_ARGS} ${PATH_LIB}${PATH_PVEMANAGER} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_PVEMANAGER}.patch &> /dev/null
+          patch ${PATCH_ARGS} ${PATH_LIB}${FILE_PVEMANAGER} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_PVEMANAGER}.patch &> /dev/null
           ;;
         apidoc)
-          patch ${PATCH_ARGS} ${PATH_LIB}${PATH_APIDOC} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_APIDOC}.patch &> /dev/null
+          patch ${PATCH_ARGS} ${PATH_LIB}${FILE_APIDOC} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_APIDOC}.patch &> /dev/null
           ;;
       esac
     done
-    [ "${_DEBUG}" == "on" ] && echo "Installing ${PATH_LIB}${PATH_TRUENAS}"
-    cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_TRUENAS} ${PATH_LIB}${PATH_TRUENAS}
+    [ "${_DEBUG}" == "on" ] && echo "Installing ${PATH_LIB}${FILE_TRUENAS}"
+    cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_TRUENAS} ${PATH_LIB}${FILE_TRUENAS}
     cp -r ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_CLIENT} ${PATH_LIB}
 
     exit 0
@@ -95,36 +95,36 @@ case "$1" in
 
     # Check to see if the system was already patched manually or by another means.
     # Check /usr/share/perl5/PVE/Storage/ZFSPlugin.pm for 'truenas'
-    if [ $(cat ${PATH_LIB}${PATH_ZFSPLUGIN} | grep -c "truenas") -eq 0 ]; then
-      [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${PATH_ZFSPLUGIN}"
-      patch ${PATCH_ARGS} ${PATH_LIB}${PATH_ZFSPLUGIN} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_ZFSPLUGIN}.patch &> /dev/null
+    if [ $(cat ${PATH_LIB}${FILE_ZFSPLUGIN} | grep -c "truenas") -eq 0 ]; then
+      [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${FILE_ZFSPLUGIN}"
+      patch ${PATCH_ARGS} ${PATH_LIB}${FILE_ZFSPLUGIN} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_ZFSPLUGIN}.patch &> /dev/null
       RESTART_PVE_SERVICES="yes"
     fi
 
     # Check /usr/share/pve-manager/js/pvemanagerlib.js for 'truenas'
-    if [ $(cat ${PATH_LIB}${PATH_PVEMANAGER} | grep -c "truenas") -eq 0 ]; then
-      [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${PATH_PVEMANAGER}"
-      patch ${PATCH_ARGS} ${PATH_LIB}${PATH_PVEMANAGER} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_PVEMANAGER}.patch &> /dev/null
+    if [ $(cat ${PATH_LIB}${FILE_PVEMANAGER} | grep -c "truenas") -eq 0 ]; then
+      [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${FILE_PVEMANAGER}"
+      patch ${PATCH_ARGS} ${PATH_LIB}${FILE_PVEMANAGER} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_PVEMANAGER}.patch &> /dev/null
       RESTART_PVE_SERVICES="yes"
     fi
 
     # Check /usr/share/pve-docs/api-viewer/apidoc.js for 'truenas'
-    if [ $(cat ${PATH_LIB}${PATH_APIDOC} | grep -c "truenas") -eq 0 ]; then
-      [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${PATH_APIDOC}"
-      patch ${PATCH_ARGS} ${PATH_LIB}${PATH_APIDOC} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_APIDOC}.patch &> /dev/null
+    if [ $(cat ${PATH_LIB}${FILE_APIDOC} | grep -c "truenas") -eq 0 ]; then
+      [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${FILE_APIDOC}"
+      patch ${PATCH_ARGS} ${PATH_LIB}${FILE_APIDOC} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_APIDOC}.patch &> /dev/null
       RESTART_PVE_SERVICES="yes"
     fi
 
     # Check /usr/share/perl5/PVE/Storage/LunCmd/TrueNAS.pm
-    if test ! -e ${PATH_LIB}${PATH_TRUENAS}; then
-      [ "${_DEBUG}" == "on" ] && echo "Installing ${PATH_LIB}${PATH_TRUENAS}"
-      cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_TRUENAS} ${PATH_LIB}${PATH_TRUENAS}
+    if test ! -e ${PATH_LIB}${FILE_TRUENAS}; then
+      [ "${_DEBUG}" == "on" ] && echo "Installing ${PATH_LIB}${FILE_TRUENAS}"
+      cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_TRUENAS} ${PATH_LIB}${FILE_TRUENAS}
       RESTART_PVE_SERVICES="yes"
     fi
 
     # Restart the necessary Proxmox VE Services if we changed any files above.
     if [ "${RESTART_PVE_SERVICES}" == "yes" ]; then
-      cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_TRUENAS} ${PATH_LIB}${PATH_TRUENAS}
+      cp ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_TRUENAS} ${PATH_LIB}${FILE_TRUENAS}
       cp -r ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${PATH_CLIENT} ${PATH_LIB}
       echo "Restarting pvedaemon..."
       pvedaemon restart
