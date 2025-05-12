@@ -3,19 +3,19 @@
 set -e
 
 # Debug variable - Values "on" or "off"
-_DEBUG="off"
+_DEBUG="on"
 
 # Setup some variables so we are not duping the paths
-PATH_LIB="/usr/share"
 FILE_APIDOC="/pve-docs/api-viewer/apidoc.js"
-PATH_PVEMANAGER="/pve-manager/js/pvemanagerlib.js"
-PATH_TRUENAS="/perl5/PVE/Storage/LunCmd/TrueNAS.pm"
-PATH_CLIENT="/perl5/TrueNAS"
-PATH_ZFSPLUGIN="/perl5/PVE/Storage/ZFSPlugin.pm"
-GIT_REPO="https://git.techg.ca/boomshankerx/"
+FILE_PVEMANAGER="/pve-manager/js/pvemanagerlib.js"
+FILE_TRUENAS="/perl5/PVE/Storage/LunCmd/TrueNAS.pm"
+FILE_ZFSPLUGIN="/perl5/PVE/Storage/ZFSPlugin.pm"
+GIT_BRANCH="main"
 GIT_LOCAL_REPO_PATH="/usr/local/src/"
 GIT_REPO_NAME="proxmox-truenas"
-GIT_BRANCH="master"
+GIT_REPO="https://github.com/boomshankerx/"
+PATH_CLIENT="/perl5/TrueNAS"
+PATH_LIB="/usr/share"
 RESTART_PVE_SERVICES="no"
 
 # This script is called as the last step of the installation of the
@@ -45,23 +45,23 @@ remove)
   fi
 
   # test if the TrueNAS.pm file is installed and remove it.
-  if [ -f ${PATH_LIB}${PATH_TRUENAS} ]; then
-    [ "$_DEBUG" == "on" ] && echo "Removing TrueNAS.pm LUN plugin at '${PATH_LIB}${PATH_TRUENAS}'"
-    rm -rf ${PATH_LIB}${PATH_TRUENAS}
+  if [ -f ${PATH_LIB}${FILE_TRUENAS} ]; then
+    [ "$_DEBUG" == "on" ] && echo "Removing TrueNAS.pm LUN plugin at '${PATH_LIB}${FILE_TRUENAS}'"
+    rm -rf ${PATH_LIB}${FILE_TRUENAS}
   fi
 
   # test if TrueNAS/Client.pm is install and remove it
-  if [ -f ${PATH_CLIENT}]; then
-    [ "$_DEBUG" == "on" ] && echo "Removing TrueNAS.pm LUN plugin at '${PATH_CLIENT}'"
-    rm -rf ${PATH_CLIENT}
+  if [ -d ${PATH_LIB}${PATH_CLIENT} ]; then
+    [ "$_DEBUG" == "on" ] && echo "Removing TrueNAS API Client at '${PATH_CLIENT}'"
+    rm -rf ${PATH_LIB}${PATH_CLIENT}
   fi
 
   echo "Reinstalling original Proxmox VE files"
-  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${PATH_ZFSPLUGIN}"
-  cp ${PATH_LIB}${PATH_ZFSPLUGIN}.orig ${PATH_LIB}${PATH_ZFSPLUGIN}
+  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
+  cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
 
-  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${PATH_PVEMANAGER}"
-  cp ${PATH_LIB}${PATH_PVEMANAGER}.orig ${PATH_LIB}${PATH_PVEMANAGER}
+  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
+  cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
 
   [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_APIDOC}"
   cp ${PATH_LIB}${FILE_APIDOC}.orig ${PATH_LIB}${FILE_APIDOC}
@@ -85,16 +85,16 @@ purge)
 upgrade)
   # test if the TrueNAS.pm file is installed and remove it.
   echo "Reinstalling original Proxmox VE files so upgrade can be performed"
-  if [ -f ${PATH_LIB}${PATH_TRUENAS} ]; then
-    [ "$_DEBUG" == "on" ] && echo "Removing 'old' TrueNAS.pm LUN plugin at '${PATH_LIB}${PATH_TRUENAS}'"
-    rm -rf ${PATH_LIB}${PATH_TRUENAS}
+  if [ -f ${PATH_LIB}${FILE_TRUENAS} ]; then
+    [ "$_DEBUG" == "on" ] && echo "Removing 'old' TrueNAS.pm LUN plugin at '${PATH_LIB}${FILE_TRUENAS}'"
+    rm -rf ${PATH_LIB}${FILE_TRUENAS}
   fi
 
-  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${PATH_ZFSPLUGIN}"
-  cp ${PATH_LIB}${PATH_ZFSPLUGIN}.orig ${PATH_LIB}${PATH_ZFSPLUGIN}
+  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
+  cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
 
-  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${PATH_PVEMANAGER}"
-  cp ${PATH_LIB}${PATH_PVEMANAGER}.orig ${PATH_LIB}${PATH_PVEMANAGER}
+  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
+  cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
 
   [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_APIDOC}"
   cp ${PATH_LIB}${FILE_APIDOC}.orig ${PATH_LIB}${FILE_APIDOC}

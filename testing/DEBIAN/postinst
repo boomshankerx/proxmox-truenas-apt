@@ -3,7 +3,7 @@
 set -e
 
 # Debug variable - Values "on" or "off"
-_DEBUG="off"
+_DEBUG="on"
 
 # Setup some variables so we are not duping the paths
 FILE_APIDOC="/pve-docs/api-viewer/apidoc.js"
@@ -13,7 +13,7 @@ FILE_ZFSPLUGIN="/perl5/PVE/Storage/ZFSPlugin.pm"
 GIT_BRANCH="main"
 GIT_LOCAL_REPO_PATH="/usr/local/src/"
 GIT_REPO_NAME="proxmox-truenas"
-GIT_REPO="https://git.techg.ca/boomshankerx/"
+GIT_REPO="https://github.com/boomshankerx/"
 PATH_CLIENT="/perl5/TrueNAS"
 PATH_LIB="/usr/share"
 RESTART_PVE_SERVICES="no"

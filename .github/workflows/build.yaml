@@ -1,0 +1,73 @@
+name: Update proxmox-truenas 'latest' release from main
+on:
+  push:
+    branches:
+      - main
+  repository_dispatch:
+    types: [main-push]
+  workflow_dispatch: {}
+env:
+  DEB_PACKAGE_NAME: 'proxmox-truenas'
+  DEB_PACKAGE_VERSION: '1.0.0-0~alpha1'
+  GITHUB_TAG: 'latest'
+  TARGET_REPO_OWNER: 'boomshankerx'
+  TARGET_REPO_NAME: 'proxmox-truenas'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout packer repo
+        uses: actions/checkout@v4
+
+      - name: Install dpkg
+        run: sudo apt-get update && sudo apt-get install -y dpkg
+
+      - name: Fix script permissions
+        run: |
+          chmod 0755 testing/DEBIAN/postinst
+          chmod 0755 testing/DEBIAN/postrm
+
+      - name: Build .deb
+        run: |
+          mkdir -p dist
+          dpkg-deb -Zgzip --build testing dist/${DEB_PACKAGE_NAME}_${DEB_PACKAGE_VERSION}_all.deb
+
+      - name: Move 'latest' tag in proxmox-truenas repo
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          git clone https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO_OWNER}/${TARGET_REPO_NAME}.git
+          cd ${TARGET_REPO_NAME}
+          git fetch origin main
+          git tag -f ${GITHUB_TAG} origin/main
+          git push -f origin ${GITHUB_TAG}
+
+      - name: Delete existing release for 'latest' (if any)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          gh release delete ${GITHUB_TAG} \
+            --repo ${TARGET_REPO_OWNER}/${TARGET_REPO_NAME} \
+            --yes
+
+      - name: Recreate 'latest' release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          gh release create ${GITHUB_TAG} \
+            --repo ${TARGET_REPO_OWNER}/${TARGET_REPO_NAME} \
+            --title "Latest Release" \
+            --notes "Auto-updated from main" \
+            --prerelease
+
+      - name: Upload .deb to release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          gh release upload ${GITHUB_TAG} \
+            dist/${DEB_PACKAGE_NAME}_${DEB_PACKAGE_VERSION}_all.deb \
+            --repo ${TARGET_REPO_OWNER}/${TARGET_REPO_NAME} \
+            --clobber

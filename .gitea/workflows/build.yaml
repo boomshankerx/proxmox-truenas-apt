@@ -47,4 +47,4 @@ jobs:
         run: |
           echo "$SSH_KEY" > /tmp/id_rsa
           chmod 600 /tmp/id_rsa
-          scp -i /tmp/id_rsa -o StrictHostKeyChecking=no //artifacts/${{ env.DEB_PACKAGE_NAME }}_${{ env.DEB_PACKAGE_VERSION }}_all.deb root@192.168.11.188:/root/
+          scp -i /tmp/id_rsa -o StrictHostKeyChecking=no /artifacts/${{ env.DEB_PACKAGE_NAME }}_${{ env.DEB_PACKAGE_VERSION }}_all.deb root@192.168.11.188:/root/
