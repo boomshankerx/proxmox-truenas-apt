@@ -1,9 +1,6 @@
 name: Build and release proxmox-truenas from separate source repo
 
 on:
-  push:
-    branches:
-      - main
   repository_dispatch:
     types: [main-push]
   workflow_dispatch: {}
