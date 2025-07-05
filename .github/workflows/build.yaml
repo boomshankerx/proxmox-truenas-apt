@@ -1,4 +1,5 @@
 name: Update proxmox-truenas 'latest' release from main
+
 on:
   push:
     branches:
@@ -6,9 +7,9 @@ on:
   repository_dispatch:
     types: [main-push]
   workflow_dispatch: {}
+
 env:
   DEB_PACKAGE_NAME: 'proxmox-truenas'
-  DEB_PACKAGE_VERSION: '1.0.0-0~alpha1'
   GITHUB_TAG: 'latest'
   TARGET_REPO_OWNER: 'boomshankerx'
   TARGET_REPO_NAME: 'proxmox-truenas'
@@ -18,21 +19,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout packer repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install dpkg
         run: sudo apt-get update && sudo apt-get install -y dpkg
 
+      - name: Compute full version
+        id: version
+        run: |
+          BASE_VERSION=$(cat VERSION)            # e.g., 1.0
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          FULL_VERSION="${BASE_VERSION}.${COMMIT_COUNT}"
+          echo "FULL_VERSION=$FULL_VERSION" >> $GITHUB_ENV
+          echo "Computed full version: $FULL_VERSION"
+
       - name: Fix script permissions
         run: |
-          chmod 0755 testing/DEBIAN/postinst
-          chmod 0755 testing/DEBIAN/postrm
+          chmod 0755 stable/DEBIAN/postinst || true
+          chmod 0755 stable/DEBIAN/postrm || true
 
-      - name: Build .deb
+      - name: Update DEBIAN/control with version
+        run: |
+          sed -i "s/^Version:.*/Version: ${FULL_VERSION}/" stable/DEBIAN/control
+
+      - name: Build .deb package
         run: |
           mkdir -p dist
-          dpkg-deb -Zgzip --build testing dist/${DEB_PACKAGE_NAME}_${DEB_PACKAGE_VERSION}_all.deb
+          dpkg-deb -Zgzip --build stable dist/${DEB_PACKAGE_NAME}_${FULL_VERSION}_all.deb
 
       - name: Move 'latest' tag in proxmox-truenas repo
         env:
@@ -59,8 +73,8 @@ jobs:
         run: |
           gh release create ${GITHUB_TAG} \
             --repo ${TARGET_REPO_OWNER}/${TARGET_REPO_NAME} \
-            --title "Latest Release" \
-            --notes "Auto-updated from main" \
+            --title "Latest Release: ${FULL_VERSION}" \
+            --notes "Auto-updated from main at version ${FULL_VERSION}" \
             --prerelease
 
       - name: Upload .deb to release
@@ -68,6 +82,6 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           gh release upload ${GITHUB_TAG} \
-            dist/${DEB_PACKAGE_NAME}_${DEB_PACKAGE_VERSION}_all.deb \
+            dist/${DEB_PACKAGE_NAME}_${FULL_VERSION}_all.deb \
             --repo ${TARGET_REPO_OWNER}/${TARGET_REPO_NAME} \
             --clobber
