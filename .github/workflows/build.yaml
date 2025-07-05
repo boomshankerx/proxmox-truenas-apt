@@ -1,38 +1,45 @@
-name: Update proxmox-truenas 'latest' release from main
+name: Build and release proxmox-truenas from separate source repo
 
 on:
   push:
     branches:
       - main
-  repository_dispatch:
-    types: [main-push]
   workflow_dispatch: {}
 
 env:
-  DEB_PACKAGE_NAME: 'proxmox-truenas'
   GITHUB_TAG: 'latest'
-  TARGET_REPO_OWNER: 'boomshankerx'
-  TARGET_REPO_NAME: 'proxmox-truenas'
+  TARGET_NAME: 'proxmox-truenas'
+  TARGET_REPO: 'boomshankerx/proxmox-truenas'
 
 jobs:
   release:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout packaging repo (this repo)
         uses: actions/checkout@v4
+
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TARGET_REPO }}
+          token: ${{ secrets.RELEASE_TOKEN }}
+          path: source
+          fetch-depth: 0
 
       - name: Install dpkg
         run: sudo apt-get update && sudo apt-get install -y dpkg
 
-      - name: Compute full version
+      - name: Compute full version from source repo
         id: version
         run: |
-          BASE_VERSION=$(cat VERSION)            # e.g., 1.0
+          cd source
+          BASE_VERSION=$(cat VERSION)
           COMMIT_COUNT=$(git rev-list --count HEAD)
           FULL_VERSION="${BASE_VERSION}.${COMMIT_COUNT}"
           echo "FULL_VERSION=$FULL_VERSION" >> $GITHUB_ENV
-          echo "Computed full version: $FULL_VERSION"
+          echo "Computed version: $FULL_VERSION"
+          cd ..
 
       - name: Fix script permissions
         run: |
@@ -46,14 +53,14 @@ jobs:
       - name: Build .deb package
         run: |
           mkdir -p dist
-          dpkg-deb -Zgzip --build stable dist/${DEB_PACKAGE_NAME}_${FULL_VERSION}_all.deb
+          dpkg-deb -Zgzip --build stable dist/${TARGET_NAME}_${FULL_VERSION}_all.deb
 
       - name: Move 'latest' tag in proxmox-truenas repo
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          git clone https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO_OWNER}/${TARGET_REPO_NAME}.git
-          cd ${TARGET_REPO_NAME}
+          git clone https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git
+          cd ${TARGET_NAME}
           git fetch origin main
           git tag -f ${GITHUB_TAG} origin/main
           git push -f origin ${GITHUB_TAG}
@@ -64,7 +71,7 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           gh release delete ${GITHUB_TAG} \
-            --repo ${TARGET_REPO_OWNER}/${TARGET_REPO_NAME} \
+            --repo ${TARGET_REPO} \
             --yes
 
       - name: Recreate 'latest' release
@@ -72,16 +79,15 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           gh release create ${GITHUB_TAG} \
-            --repo ${TARGET_REPO_OWNER}/${TARGET_REPO_NAME} \
+            --repo ${TARGET_REPO} \
             --title "Latest Release: ${FULL_VERSION}" \
             --notes "Auto-updated from main at version ${FULL_VERSION}" \
-            --prerelease
 
       - name: Upload .deb to release
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           gh release upload ${GITHUB_TAG} \
-            dist/${DEB_PACKAGE_NAME}_${FULL_VERSION}_all.deb \
-            --repo ${TARGET_REPO_OWNER}/${TARGET_REPO_NAME} \
+            dist/${TARGET_NAME}_${FULL_VERSION}_all.deb \
+            --repo ${TARGET_REPO} \
             --clobber
