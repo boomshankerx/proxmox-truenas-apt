@@ -29,10 +29,10 @@ RESTART_PVE_SERVICES="no"
 # pve_docs_ver=$(dpkg-query --showformat='${Version}' --show pve-docs)
 # pve_manager_ver=$(dpkg-query --showformat='${Version}' --show pve-manager)
 proxmox_ve_ver=$(dpkg-query --showformat='${Version}' --show proxmox-ve)
-major_ver=${proxmox_ve_ver%%.*}
+PROXMOX_VERSION=${proxmox_ve_ver%%.*}
 
 [ "${_DEBUG}" == "on" ] && echo "Proxmox Version $proxmox_ve_ver"
-[ "${_DEBUG}" == "on" ] && echo "Proxmox Major Version $major_ver"
+[ "${_DEBUG}" == "on" ] && echo "Proxmox Major Version $PROXMOX_VERSION"
 
 # Test if the truenas-proxmox repo has been downloaded. If not clone it, else
 # update the repo with a pull.
@@ -65,14 +65,14 @@ case "$1" in
       echo "Found $fullpath in arguments. Triggering patch of $fullpath"
       case "$filename" in
         ZFSPlugin)
-          patch ${PATCH_ARGS} ${PATH_LIB}${FILE_ZFSPLUGIN} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_ZFSPLUGIN}.patch &> /dev/null
+          patch ${PATCH_ARGS} ${PATH_LIB}${FILE_ZFSPLUGIN} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_ZFSPLUGIN}.${PROXMOX_VERSION}.patch &> /dev/null
           ;;
         pvemanagerlib)
-          patch ${PATCH_ARGS} ${PATH_LIB}${FILE_PVEMANAGER} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_PVEMANAGER}.patch &> /dev/null
+          patch ${PATCH_ARGS} ${PATH_LIB}${FILE_PVEMANAGER} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_PVEMANAGER}.${PROXMOX_VERSION}.patch &> /dev/null
           ;;
-        apidoc)
-          patch ${PATCH_ARGS} ${PATH_LIB}${FILE_APIDOC} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_APIDOC}.patch &> /dev/null
-          ;;
+        # apidoc)
+        #   patch ${PATCH_ARGS} ${PATH_LIB}${FILE_APIDOC} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_APIDOC}.${PROXMOX_VERSION}.patch &> /dev/null
+        #   ;;
       esac
     done
     [ "${_DEBUG}" == "on" ] && echo "Installing ${PATH_LIB}${FILE_TRUENAS}"
@@ -97,23 +97,23 @@ case "$1" in
     # Check /usr/share/perl5/PVE/Storage/ZFSPlugin.pm for 'truenas'
     if [ $(cat ${PATH_LIB}${FILE_ZFSPLUGIN} | grep -c "truenas") -eq 0 ]; then
       [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${FILE_ZFSPLUGIN}"
-      patch ${PATCH_ARGS} ${PATH_LIB}${FILE_ZFSPLUGIN} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_ZFSPLUGIN}.patch &> /dev/null
+      patch ${PATCH_ARGS} ${PATH_LIB}${FILE_ZFSPLUGIN} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_ZFSPLUGIN}.${PROXMOX_VERSION}.patch &> /dev/null
       RESTART_PVE_SERVICES="yes"
     fi
 
     # Check /usr/share/pve-manager/js/pvemanagerlib.js for 'truenas'
     if [ $(cat ${PATH_LIB}${FILE_PVEMANAGER} | grep -c "truenas") -eq 0 ]; then
       [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${FILE_PVEMANAGER}"
-      patch ${PATCH_ARGS} ${PATH_LIB}${FILE_PVEMANAGER} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_PVEMANAGER}.patch &> /dev/null
+      patch ${PATCH_ARGS} ${PATH_LIB}${FILE_PVEMANAGER} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_PVEMANAGER}.${PROXMOX_VERSION}.patch &> /dev/null
       RESTART_PVE_SERVICES="yes"
     fi
 
     # Check /usr/share/pve-docs/api-viewer/apidoc.js for 'truenas'
-    if [ $(cat ${PATH_LIB}${FILE_APIDOC} | grep -c "truenas") -eq 0 ]; then
-      [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${FILE_APIDOC}"
-      patch ${PATCH_ARGS} ${PATH_LIB}${FILE_APIDOC} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_APIDOC}.patch &> /dev/null
-      RESTART_PVE_SERVICES="yes"
-    fi
+    # if [ $(cat ${PATH_LIB}${FILE_APIDOC} | grep -c "truenas") -eq 0 ]; then
+    #   [ "${_DEBUG}" == "on" ] && echo "Patching ${PATH_LIB}${FILE_APIDOC}"
+    #   patch ${PATCH_ARGS} ${PATH_LIB}${FILE_APIDOC} < ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}${FILE_APIDOC}.patch &> /dev/null
+    #   RESTART_PVE_SERVICES="yes"
+    # fi
 
     # Check /usr/share/perl5/PVE/Storage/LunCmd/TrueNAS.pm
     if test ! -e ${PATH_LIB}${FILE_TRUENAS}; then
