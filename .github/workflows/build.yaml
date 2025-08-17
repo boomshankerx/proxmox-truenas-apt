@@ -1,4 +1,4 @@
-name: Build and release proxmox-truenas from separate source repo
+name: Build .deb package
 
 on:
   repository_dispatch:
@@ -9,6 +9,9 @@ env:
   GITHUB_TAG: 'latest'
   TARGET_NAME: 'proxmox-truenas'
   TARGET_REPO: 'boomshankerx/proxmox-truenas'
+  APT_REPO_NAME: 'proxmox-truenas-apt'
+  APT_REPO_URL: 'https://boomshankerx.github.io/proxmox-truenas-apt/'
+  APT_REPO: 'boomshankerx/proxmox-truenas-apt'
 
 jobs:
   release:
@@ -90,3 +93,80 @@ jobs:
             dist/${TARGET_NAME}_${FULL_VERSION}_all.deb \
             --repo ${TARGET_REPO} \
             --clobber
+  apt_repo:
+    name: Build & Publish APT repo (bookworm + trixie)
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    env:
+      REPO_NAME: proxmox-truenas
+      COMPONENTS: main
+      ARCHES: "all"                          # add "amd64 arm64" if you ship arch builds later
+      REPO_URL: https://YOURUSER.github.io/YOURREPO/
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v4
+
+      - name: Download .deb from latest release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          mkdir -p artifacts
+          gh release download latest \
+            --repo ${{ env.TARGET_REPO }} \
+            --pattern "*.deb" \
+            --dir artifacts
+          ls -l artifacts
+
+      - name: Build (bookworm)
+        id: bookworm
+        uses: morph027/apt-repo-action@v3
+        with:
+          repo-name: ${{ env.REPO_NAME }}
+          scan-dir: artifacts
+          codename: bookworm
+          components: ${{ env.COMPONENTS }}
+          architectures: ${{ env.ARCHES }}
+          signing-key: ${{ secrets.SIGNING_KEY }}      # ASCII-armored private key
+          import-from-repo-url: |
+            deb-all ${{ env.REPO_URL }} bookworm ${{ env.COMPONENTS }}
+
+      - name: Build (trixie)
+        id: trixie
+        uses: morph027/apt-repo-action@v3
+        with:
+          repo-name: ${{ env.REPO_NAME }}
+          scan-dir: artifacts
+          codename: trixie
+          components: ${{ env.COMPONENTS }}
+          architectures: ${{ env.ARCHES }}
+          signing-key: ${{ secrets.SIGNING_KEY }}
+          import-from-repo-url: |
+            deb-all ${{ env.REPO_URL }} trixie ${{ env.COMPONENTS }}
+
+      - name: Merge to single site/
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          rsync -a "${{ steps.bookworm.outputs.dir }}/" site/
+          rsync -a "${{ steps.trixie.outputs.dir }}/"  site/
+          touch site/.nojekyll
+          # Export public key for clients (optional if the action already emitted one)
+          gpg --armor --export $(gpg --list-keys --with-colons | awk -F: '/^pub:/ {print $5; exit}') > site/gpg.key || true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
