@@ -106,7 +106,7 @@ jobs:
       REPO_NAME: proxmox-truenas
       COMPONENTS: main
       ARCHES: "all"                          # add "amd64 arm64" if you ship arch builds later
-      REPO_URL: https://YOURUSER.github.io/YOURREPO/
+      REPO_URL: https://boomshankerx.github.io/truenas-proxmox-apt/
 
     steps:
       - name: Checkout
