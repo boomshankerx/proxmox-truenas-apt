@@ -1,2 +1,3 @@
-# freenas-proxmox-packer
-The freenas-proxmox package repo for create .deb files
+# proxmox-truenas-apt
+
+Repo for building and hosting proxmox-truenas APT Repository.
