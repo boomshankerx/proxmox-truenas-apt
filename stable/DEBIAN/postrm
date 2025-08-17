@@ -74,6 +74,8 @@ remove)
   pvestatd restart
   echo "Restarting pvescheduler..."
   systemctl restart pvescheduler.service
+  echo "Restarting HA Services"
+  systemctl restart pve-ha-crm.service pve-ha-lrm.service
 
   exit 0
   ;;
