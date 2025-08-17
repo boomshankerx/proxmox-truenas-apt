@@ -63,8 +63,8 @@ remove)
   [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
   cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
 
-  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_APIDOC}"
-  cp ${PATH_LIB}${FILE_APIDOC}.orig ${PATH_LIB}${FILE_APIDOC}
+  # [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_APIDOC}"
+  # cp ${PATH_LIB}${FILE_APIDOC}.orig ${PATH_LIB}${FILE_APIDOC}
 
   echo "Restarting pvedaemon..."
   pvedaemon restart
