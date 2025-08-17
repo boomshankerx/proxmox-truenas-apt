@@ -1,4 +1,4 @@
-name: Build .deb package
+name: Build & Release proxmox-truenas package
 
 on:
   repository_dispatch:
@@ -10,7 +10,7 @@ env:
   TARGET_NAME: 'proxmox-truenas'
   TARGET_REPO: 'boomshankerx/proxmox-truenas'
   APT_REPO_NAME: 'proxmox-truenas-apt'
-  APT_REPO_URL: 'https://boomshankerx.github.io/proxmox-truenas-apt/'
+  APT_REPO_URL: 'https://boomshankerx.github.io/proxmox-truenas-apt'
   APT_REPO: 'boomshankerx/proxmox-truenas-apt'
 
 jobs:
@@ -18,15 +18,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout packaging repo (this repo)
+      - name: Checkout proxmox-truenas-apt
         uses: actions/checkout@v4
 
-      - name: Checkout source repo
+      - name: Checkout proxmox-truenas
         uses: actions/checkout@v4
         with:
           repository: ${{ env.TARGET_REPO }}
           token: ${{ secrets.RELEASE_TOKEN }}
-          path: source
+          path: src
           fetch-depth: 0
 
       - name: Install dpkg
@@ -35,7 +35,7 @@ jobs:
       - name: Compute full version from source repo
         id: version
         run: |
-          cd source
+          cd src
           BASE_VERSION=$(cat VERSION)
           COMMIT_COUNT=$(git rev-list --count HEAD)
           FULL_VERSION="${BASE_VERSION}.${COMMIT_COUNT}"
@@ -83,7 +83,7 @@ jobs:
           gh release create ${GITHUB_TAG} \
             --repo ${TARGET_REPO} \
             --title "Latest Release: ${FULL_VERSION}" \
-            --notes "Auto-updated from main at version ${FULL_VERSION}" \
+            --notes "Auto-updated from main at version ${FULL_VERSION}" 
 
       - name: Upload .deb to release
         env:
@@ -105,8 +105,8 @@ jobs:
     env:
       REPO_NAME: proxmox-truenas
       COMPONENTS: main
-      ARCHES: "all"                          # add "amd64 arm64" if you ship arch builds later
-      REPO_URL: https://boomshankerx.github.io/truenas-proxmox-apt/
+      ARCHES: amd64 i386 arm64
+      REPO_URL: https://boomshankerx.github.io/proxmox-truenas-apt
 
     steps:
       - name: Checkout
@@ -128,7 +128,7 @@ jobs:
 
       - name: Build (bookworm)
         id: bookworm
-        uses: morph027/apt-repo-action@v3
+        uses: morph027/apt-repo-action@v3.7
         with:
           repo-name: ${{ env.REPO_NAME }}
           scan-dir: artifacts
@@ -136,12 +136,12 @@ jobs:
           components: ${{ env.COMPONENTS }}
           architectures: ${{ env.ARCHES }}
           signing-key: ${{ secrets.SIGNING_KEY }}      # ASCII-armored private key
-          import-from-repo-url: |
-            deb-all ${{ env.REPO_URL }} bookworm ${{ env.COMPONENTS }}
+          # import-from-repo-url: |
+          #   deb-all ${{ env.REPO_URL }} bookworm ${{ env.COMPONENTS }}
 
       - name: Build (trixie)
         id: trixie
-        uses: morph027/apt-repo-action@v3
+        uses: morph027/apt-repo-action@v3.7
         with:
           repo-name: ${{ env.REPO_NAME }}
           scan-dir: artifacts
@@ -149,8 +149,8 @@ jobs:
           components: ${{ env.COMPONENTS }}
           architectures: ${{ env.ARCHES }}
           signing-key: ${{ secrets.SIGNING_KEY }}
-          import-from-repo-url: |
-            deb-all ${{ env.REPO_URL }} trixie ${{ env.COMPONENTS }}
+          # import-from-repo-url: |
+          #   deb-all ${{ env.REPO_URL }} trixie ${{ env.COMPONENTS }}
 
       - name: Merge to single site/
         run: |
@@ -158,9 +158,7 @@ jobs:
           mkdir -p site
           rsync -a "${{ steps.bookworm.outputs.dir }}/" site/
           rsync -a "${{ steps.trixie.outputs.dir }}/"  site/
-          touch site/.nojekyll
-          # Export public key for clients (optional if the action already emitted one)
-          gpg --armor --export $(gpg --list-keys --with-colons | awk -F: '/^pub:/ {print $5; exit}') > site/gpg.key || true
+          cp -r static/* site/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

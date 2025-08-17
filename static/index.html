@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>proxmox-truenas APT Repository</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      line-height: 1.6;
+      color: #222;
+    }
+    h1, h2 {
+      color: #333;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+    code {
+      font-family: monospace;
+    }
+    footer {
+      margin-top: 3rem;
+      font-size: 0.9em;
+      color: #666;
+      border-top: 1px solid #ddd;
+      padding-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>proxmox-truenas APT Repository</h1>
+  <p>
+    This repository hosts the <code>proxmox-truenas</code> package for Debian systems.
+  </p>
+
+  <h2>1. Import the signing key</h2>
+  <pre><code>curl -fsSL https://boomshankerx.github.io/proxmox-truenas-apt/gpg.key \
+  | sudo gpg --dearmor -o /usr/share/keyrings/proxmox-truenas.gpg</code></pre>
+
+  <h2>2. Add the repository</h2>
+  <p><strong>Debian 12 (bookworm):</strong></p>
+  <pre><code>echo "deb [signed-by=/usr/share/keyrings/proxmox-truenas.gpg] \
+https://boomshankerx.github.io/proxmox-truenas-apt bookworm main" \
+| sudo tee /etc/apt/sources.list.d/proxmox-truenas.list</code></pre>
+
+  <p><strong>Debian 13 (trixie):</strong></p>
+  <pre><code>echo "deb [signed-by=/usr/share/keyrings/proxmox-truenas.gpg] \
+https://boomshankerx.github.io/proxmox-truenas-apt trixie main" \
+| sudo tee /etc/apt/sources.list.d/proxmox-truenas.list</code></pre>
+
+  <h2>3. Update & install</h2>
+  <pre><code>sudo apt update
+sudo apt install proxmox-truenas</code></pre>
+
+  <footer>
+    <p>
+      Repository built and published automatically from
+      <a href="https://github.com/boomshankerx/proxmox-truenas">proxmox-truenas</a>
+      using GitHub Actions.
+    </p>
+  </footer>
+</body>
+</html>
