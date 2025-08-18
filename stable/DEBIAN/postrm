@@ -51,18 +51,11 @@ remove)
     rm -rf ${PATH_LIB}${PATH_CLIENT}
   fi
 
-  echo "Reinstalling pve-manager and libpve-storage-perl packages"
-  apt install --reinstall libpve-storage-perl pve-manager
+  echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
+  cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
 
-  echo "Removing patch backups"
-  rm -vf ${PATH_LIB}${FILE_ZFSPLUGIN}.orig
-  rm -vf ${PATH_LIB}${FILE_PVEMANAGER}.orig
-
-  # echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
-  # cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
-
-  # echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
-  # cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
+  echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
+  cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
 
   echo "Restarting pvedaemon..."
   pvedaemon restart
@@ -90,18 +83,11 @@ upgrade)
     rm -rf ${PATH_LIB}${FILE_TRUENAS}
   fi
 
-  echo "Reinstalling pve-manager and libpve-storage-perl packages"
-  apt install --reinstall libpve-storage-perl pve-manager
+  echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
+  cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
 
-  echo "Removing patch backups"
-  rm -vf ${PATH_LIB}${FILE_ZFSPLUGIN}.orig
-  rm -vf ${PATH_LIB}${FILE_PVEMANAGER}.orig
-
-  # echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
-  # cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
-
-  # echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
-  # cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
+  echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
+  cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
 
   exit 0
   ;;
