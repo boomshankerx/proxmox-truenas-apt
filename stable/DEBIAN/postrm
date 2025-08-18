@@ -53,9 +53,11 @@ remove)
 
   echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
   cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
+  rm ${PATH_LIB}${FILE_ZFSPLUGIN}.orig
 
   echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
   cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
+  rm ${PATH_LIB}${FILE_PVEMANAGER}.orig
 
   echo "Restarting pvedaemon..."
   pvedaemon restart
@@ -67,6 +69,8 @@ remove)
   systemctl restart pvescheduler.service
   echo "Restarting HA Services"
   systemctl restart pve-ha-crm.service pve-ha-lrm.service
+
+  echo "** RECOMMENDED **\nReinstall Proxmox VE packages to ensure the correct versions are in place. Run:\n\napt reinstall pve-manager libpve-storage-perl"
 
   exit 0
   ;;

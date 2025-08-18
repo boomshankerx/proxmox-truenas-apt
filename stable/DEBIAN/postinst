@@ -41,7 +41,6 @@ else
   git -C ${GIT_REPO_PATH}${GIT_REPO_NAME} pull
 fi
 
-# What is the 'postinst' script doing...
 case "$1" in
   triggered)
     for fullpath in $paths
