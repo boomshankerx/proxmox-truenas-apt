@@ -11,60 +11,58 @@ FILE_PVEMANAGER="/pve-manager/js/pvemanagerlib.js"
 FILE_TRUENAS="/perl5/PVE/Storage/LunCmd/TrueNAS.pm"
 FILE_ZFSPLUGIN="/perl5/PVE/Storage/ZFSPlugin.pm"
 GIT_BRANCH="main"
-GIT_LOCAL_REPO_PATH="/usr/local/src/"
+GIT_REPO_PATH="/usr/local/src/"
 GIT_REPO_NAME="proxmox-truenas"
-GIT_REPO="https://github.com/boomshankerx/"
+GIT_REPO_URL="https://github.com/boomshankerx/"
 PATH_CLIENT="/perl5/TrueNAS"
 PATH_LIB="/usr/share"
 RESTART_PVE_SERVICES="no"
 
-# This script is called as the last step of the installation of the
-# package.  All the package's files are in place, dpkg has already
-# done its automatic conffile handling, and all the packages we depend
-# of are already fully installed and configured.
+[ "${_DEBUG}" == "on" ] && PATCH_ARGS="--verbose -b --ignore-whitespace" || PATCH_ARGS="-s -b --ignore-whitespace"
 
-[ "$_DEBUG" == "on" ] && PATCH_ARGS="--verbose -b --ignore-whitespace" || PATCH_ARGS="-s -b --ignore-whitespace"
+# Get some version numbers of the Proxmox packages
+ver_storage=$(dpkg-query --showformat='${Version}' --show libpve-storage-perl)
+ver_manager=$(dpkg-query --showformat='${Version}' --show pve-manager)
+ver_proxmox=$(dpkg-query --showformat='${Version}' --show proxmox-ve)
+ver_major=${ver_proxmox%%.*}
 
-# libpve_storage_perl_ver=$(dpkg-query --showformat='${Version}' --show libpve-storage-perl)
-# pve_manager_ver=$(dpkg-query --showformat='${Version}' --show pve-manager)
-# pve_docs_ver=$(dpkg-query --showformat='${Version}' --show pve-docs)
-proxmox_ve_ver=$(dpkg-query --showformat='${Version}' --show proxmox-ve)
-major_ver=${proxmox_ve_ver%%.*}
+echo "Proxmox Version $ver_proxmox"
+echo "Proxmox Major Version $ver_major"
+echo "Proxmox Storage Version $ver_storage"
+echo "Proxmox Manager Version $ver_manager"
 
-[ "$_DEBUG" == "on" ] && echo "Proxmox Version $proxmox_ve_ver"
-[ "$_DEBUG" == "on" ] && echo "Proxmox Major Version $major_ver"
-
-# What is the 'postinst' script doing...
-[ "$_DEBUG" == "on" ] && echo "Initiating '$1' with arg $2"
 case "$1" in
 remove)
   # test if the freenas-proxmox repo has been downloaded
-  if [ -d ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME} ]; then
-    [ "$_DEBUG" == "on" ] && echo "Removing git repo '${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}'"
-    rm -rf ${GIT_LOCAL_REPO_PATH}${GIT_REPO_NAME}
+  if [ -d ${GIT_REPO_PATH}${GIT_REPO_NAME} ]; then
+    echo "Removing git repo '${GIT_REPO_PATH}${GIT_REPO_NAME}'"
+    rm -rf ${GIT_REPO_PATH}${GIT_REPO_NAME}
   fi
 
   # test if the TrueNAS.pm file is installed and remove it.
   if [ -f ${PATH_LIB}${FILE_TRUENAS} ]; then
-    [ "$_DEBUG" == "on" ] && echo "Removing TrueNAS.pm LUN plugin at '${PATH_LIB}${FILE_TRUENAS}'"
+    echo "Removing TrueNAS.pm LunCmd plugin at '${PATH_LIB}${FILE_TRUENAS}'"
     rm -rf ${PATH_LIB}${FILE_TRUENAS}
   fi
 
   # test if TrueNAS/Client.pm is install and remove it
   if [ -d ${PATH_LIB}${PATH_CLIENT} ]; then
-    [ "$_DEBUG" == "on" ] && echo "Removing TrueNAS API Client at '${PATH_CLIENT}'"
+    echo "Removing TrueNAS API Client at '${PATH_CLIENT}'"
     rm -rf ${PATH_LIB}${PATH_CLIENT}
   fi
 
-  echo "Reinstalling original Proxmox VE files"
-  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
-  cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
+  echo "Reinstalling pve-manager and libpve-storage-perl packages"
+  apt install --reinstall libpve-storage-perl pve-manager
 
-  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
-  cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
+  echo "Removing patch backups"
+  rm -vf ${PATH_LIB}${FILE_ZFSPLUGIN}.orig
+  rm -vf ${PATH_LIB}${FILE_PVEMANAGER}.orig
 
-  # [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_APIDOC}"
-  # cp ${PATH_LIB}${FILE_APIDOC}.orig ${PATH_LIB}${FILE_APIDOC}
+  # echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
+  # cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
+
+  # echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
+  # cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
 
   echo "Restarting pvedaemon..."
   pvedaemon restart
@@ -88,18 +86,22 @@ upgrade)
   # test if the TrueNAS.pm file is installed and remove it.
   echo "Reinstalling original Proxmox VE files so upgrade can be performed"
   if [ -f ${PATH_LIB}${FILE_TRUENAS} ]; then
-    [ "$_DEBUG" == "on" ] && echo "Removing 'old' TrueNAS.pm LUN plugin at '${PATH_LIB}${FILE_TRUENAS}'"
+    echo "Removing 'old' TrueNAS.pm LUN plugin at '${PATH_LIB}${FILE_TRUENAS}'"
     rm -rf ${PATH_LIB}${FILE_TRUENAS}
   fi
 
-  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
-  cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
+  echo "Reinstalling pve-manager and libpve-storage-perl packages"
+  apt install --reinstall libpve-storage-perl pve-manager
 
-  [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
-  cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
+  echo "Removing patch backups"
+  rm -vf ${PATH_LIB}${FILE_ZFSPLUGIN}.orig
+  rm -vf ${PATH_LIB}${FILE_PVEMANAGER}.orig
 
-  # [ "$_DEBUG" == "on" ] && echo "Reinstall original ${PATH_LIB}${FILE_APIDOC}"
-  # cp ${PATH_LIB}${FILE_APIDOC}.orig ${PATH_LIB}${FILE_APIDOC}
+  # echo "Reinstall original ${PATH_LIB}${FILE_ZFSPLUGIN}"
+  # cp ${PATH_LIB}${FILE_ZFSPLUGIN}.orig ${PATH_LIB}${FILE_ZFSPLUGIN}
+
+  # echo "Reinstall original ${PATH_LIB}${FILE_PVEMANAGER}"
+  # cp ${PATH_LIB}${FILE_PVEMANAGER}.orig ${PATH_LIB}${FILE_PVEMANAGER}
 
   exit 0
   ;;
