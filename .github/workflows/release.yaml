@@ -1,0 +1,161 @@
+
+name: Release
+
+on:
+  # Source repo should send:
+  #   repository_dispatch with type: release-published
+  #   and client_payload: { "tag_name": "v1.2.3" }
+  repository_dispatch:
+    types: [release-published]
+  # Manual fallback
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Release tag to use (e.g., v1.2.3). Leave blank to use 'latest'."
+        required: false
+        type: string
+
+env:
+  TARGET_NAME: 'proxmox-truenas'
+  TARGET_REPO: 'boomshankerx/proxmox-truenas'
+  REPO_NAME: 'proxmox-truenas'
+  COMPONENTS: main
+  ARCHES: amd64 i386 arm64
+  REPO_URL: https://boomshankerx.github.io/proxmox-truenas-apt
+
+jobs:
+  build_release:
+    name: Build .deb package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to upload assets to the release
+
+    outputs:
+      tag: ${{ steps.version.outputs.TAG }}
+      version: ${{ steps.version.outputs.FULL_VERSION }}
+
+    steps:
+      - name: Checkout (APT repo)
+        uses: actions/checkout@v4
+
+      - name: Install build tooling
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y dpkg dpkg-dev fakeroot
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.release.tag_name || github.event.inputs.tag_name }}"
+          if [ -z "${TAG}" ]; then
+            echo "This workflow must be triggered by a published release or given a tag_name input."
+            exit 1
+          fi
+          FULL_VERSION="${TAG#v}"
+          echo "TAG=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "FULL_VERSION=${FULL_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "FULL_VERSION=${FULL_VERSION}" >> "$GITHUB_ENV"
+          echo "Using tag: ${TAG}"
+          echo "Debian version: ${FULL_VERSION}"
+
+      - name: Fix maintainer script permissions (best-effort)
+        run: |
+          chmod 0755 stable/DEBIAN/postinst || true
+          chmod 0755 stable/DEBIAN/postrm  || true
+          chmod 0755 stable/DEBIAN/preinst || true
+          chmod 0755 stable/DEBIAN/prerm  || true
+
+      - name: Update DEBIAN/control with version
+        run: |
+          set -euo pipefail
+          test -f stable/DEBIAN/control
+          tmpfile=$(mktemp)
+          sed "s/^Version:.*/Version: ${FULL_VERSION}/" stable/DEBIAN/control > "$tmpfile"
+          mv "$tmpfile" stable/DEBIAN/control
+
+      - name: Build .deb package
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          fakeroot dpkg-deb --build --root-owner-group stable "dist/${TARGET_NAME}_${FULL_VERSION}_all.deb"
+          dpkg-deb --info "dist/${TARGET_NAME}_${FULL_VERSION}_all.deb"
+          dpkg-deb --contents "dist/${TARGET_NAME}_${FULL_VERSION}_all.deb" | head -n 20
+
+      - name: Upload .deb to the tagged release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release upload "${{ steps.version.outputs.TAG }}" \
+            "dist/${TARGET_NAME}_${FULL_VERSION}_all.deb" \
+            --repo "${{ env.TARGET_REPO }}" \
+            --clobber
+
+  apt_repo:
+    name: Build & Publish APT repo (bookworm + trixie)
+    needs: build_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout (APT repo)
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v4
+
+      - name: Download .deb from tagged release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          gh release download "${{ needs.build_release.outputs.tag }}" \
+            --repo "${{ env.TARGET_REPO }}" \
+            --pattern "*.deb" \
+            --dir artifacts
+          ls -l artifacts
+
+      - name: Build (bookworm)
+        id: bookworm
+        uses: morph027/apt-repo-action@v3.7
+        with:
+          repo-name: ${{ env.REPO_NAME }}
+          scan-dir: artifacts
+          codename: bookworm
+          components: ${{ env.COMPONENTS }}
+          architectures: ${{ env.ARCHES }}
+          signing-key: ${{ secrets.SIGNING_KEY }}
+
+      - name: Build (trixie)
+        id: trixie
+        uses: morph027/apt-repo-action@v3.7
+        with:
+          repo-name: ${{ env.REPO_NAME }}
+          scan-dir: artifacts
+          codename: trixie
+          components: ${{ env.COMPONENTS }}
+          architectures: ${{ env.ARCHES }}
+          signing-key: ${{ secrets.SIGNING_KEY }}
+
+      - name: Merge to single site/
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          rsync -a "${{ steps.bookworm.outputs.dir }}/" site/
+          rsync -a "${{ steps.trixie.outputs.dir }}/"  site/
+          if [ -d static ]; then cp -r static/* site/; fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
