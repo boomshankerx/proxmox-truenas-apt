@@ -40,22 +40,22 @@
 
   <h2>1. Import the signing key</h2>
   <pre><code>curl -fsSL https://boomshankerx.github.io/proxmox-truenas-apt/gpg.key \
-  | sudo gpg --dearmor -o /usr/share/keyrings/proxmox-truenas.gpg</code></pre>
+  | gpg --dearmor -o /etc/apt/keyrings/proxmox-truenas.gpg</code></pre>
 
   <h2>2. Add the repository</h2>
   <p><strong>Debian 12 (bookworm):</strong></p>
-  <pre><code>echo "deb [signed-by=/usr/share/keyrings/proxmox-truenas.gpg] \
+  <pre><code>echo "deb [signed-by=/etc/apt/keyrings/proxmox-truenas.gpg] \
 https://boomshankerx.github.io/proxmox-truenas-apt bookworm main" \
-| sudo tee /etc/apt/sources.list.d/proxmox-truenas.list</code></pre>
+| tee /etc/apt/sources.list.d/proxmox-truenas.list</code></pre>
 
   <p><strong>Debian 13 (trixie):</strong></p>
-  <pre><code>echo "deb [signed-by=/usr/share/keyrings/proxmox-truenas.gpg] \
+  <pre><code>echo "deb [signed-by=/etc/apt/keyrings/proxmox-truenas.gpg] \
 https://boomshankerx.github.io/proxmox-truenas-apt trixie main" \
-| sudo tee /etc/apt/sources.list.d/proxmox-truenas.list</code></pre>
+| tee /etc/apt/sources.list.d/proxmox-truenas.list</code></pre>
 
   <h2>3. Update & install</h2>
-  <pre><code>sudo apt update
-sudo apt install proxmox-truenas</code></pre>
+  <pre><code>apt update
+apt install proxmox-truenas</code></pre>
 
   <footer>
     <p>
