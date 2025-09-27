@@ -70,7 +70,7 @@ remove)
   echo "Restarting HA Services"
   systemctl restart pve-ha-crm.service pve-ha-lrm.service
 
-  echo "** RECOMMENDED **\nReinstall Proxmox VE packages to ensure the correct versions are in place. Run:\n\napt reinstall pve-manager libpve-storage-perl"
+  echo -e "** RECOMMENDED **\nReinstall Proxmox VE packages to ensure the correct versions are in place. Run:\n\napt reinstall pve-manager libpve-storage-perl"
 
   exit 0
   ;;

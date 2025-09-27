@@ -48,7 +48,7 @@ jobs:
         id: version
         run: |
           set -euo pipefail
-          TAG="${{ github.event.release.tag_name || github.event.inputs.tag_name }}"
+          TAG="${{ github.event.client_payload.tag_name || github.event.inputs.tag_name }}"
           if [ -z "${TAG}" ]; then
             echo "This workflow must be triggered by a published release or given a tag_name input."
             exit 1
