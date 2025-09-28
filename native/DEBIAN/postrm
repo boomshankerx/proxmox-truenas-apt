@@ -1,0 +1,47 @@
+#!/bin/bash
+# Abort if any command returns an error value
+set -e
+
+# Get some version numbers of the Proxmox packages
+ver_storage=$(dpkg-query --showformat='${Version}' --show libpve-storage-perl)
+ver_manager=$(dpkg-query --showformat='${Version}' --show pve-manager)
+ver_proxmox=$(dpkg-query --showformat='${Version}' --show proxmox-ve)
+ver_major=${ver_proxmox%%.*}
+
+echo "Proxmox Version $ver_proxmox"
+echo "Proxmox Major Version $ver_major"
+echo "Proxmox Storage Version $ver_storage"
+echo "Proxmox Manager Version $ver_manager"
+
+case "$1" in
+remove)
+  echo "Restarting pvedaemon..."
+  systemctl restart pvedaemon.service
+  echo "Restarting pveproxy..."
+  systemctl restart pveproxy.service
+  echo "Restarting pvestatd..."
+  systemctl restart pvestatd.service
+  echo "Restarting pvescheduler..."
+  systemctl restart pvescheduler.service
+  echo "Restarting HA Services"
+  systemctl restart pve-ha-crm.service pve-ha-lrm.service
+  exit 0
+  ;;
+
+purge)
+  exit 0
+  ;;
+
+upgrade)
+  exit 0
+  ;;
+
+failed-upgrade | disappear | abort-upgrade | abort-remove | abort-deconfigure) ;;
+
+*)
+  echo "$0: didn't understand being called with \`$1'" 1>&2
+  exit 0
+  ;;
+esac
+
+exit 0

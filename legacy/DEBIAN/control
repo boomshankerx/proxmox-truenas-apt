@@ -1,0 +1,16 @@
+Architecture: all
+Depends: git, libio-socket-ip-perl, libio-socket-ssl-perl, libjson-rpc-common-perl, liblog-any-perl, libprotocol-websocket-perl, patch
+Description: TrueNAS over iSCSI Custom Storage Plugin for Proxmox VE
+Homepage: https://github.com/boomshankerx/proxmox-truenas/wiki
+Maintainer: TechG Solutions <lorne@techgsolutions.com>
+Package: proxmox-truenas
+Pre-Depends: git, libio-socket-ip-perl, libio-socket-ssl-perl, libjson-rpc-common-perl, liblog-any-perl, libprotocol-websocket-perl, patch
+Priority: optional
+Provides: proxmox-truenas
+Section: perl
+Source: proxmox-truenas
+Standards-Version: 4.5.0
+Uploaders: Lorne Guse <lorne@techgsolutions.com>
+Vcs-Browser: https://github.com/boomshankerx/proxmox-truenas.git
+Vcs-Git: https://github.com/boomshankerx/proxmox-truenas.git
+Version: 1.0.0
