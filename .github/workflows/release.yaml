@@ -35,14 +35,21 @@ jobs:
       version: ${{ steps.version.outputs.FULL_VERSION }}
 
     steps:
-      - name: Checkout (APT repo)
-        uses: actions/checkout@v4
-
       - name: Install build tooling
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y dpkg dpkg-dev fakeroot
+
+      - name: Checkout (APT repo)
+        uses: actions/checkout@v4
+
+      - name: Checkout (source repo)
+        uses: actions/checkout@v4
+        with:
+          repository: boomshankerx/proxmox-truenas
+          path: source
+          depth: 1
 
       - name: Derive version from tag
         id: version
@@ -57,31 +64,50 @@ jobs:
           echo "TAG=${TAG}" >> "$GITHUB_OUTPUT"
           echo "FULL_VERSION=${FULL_VERSION}" >> "$GITHUB_OUTPUT"
           echo "FULL_VERSION=${FULL_VERSION}" >> "$GITHUB_ENV"
-          echo "Using tag: ${TAG}"
-          echo "Debian version: ${FULL_VERSION}"
+          echo "Tag: ${TAG}"
+          echo "Version: ${FULL_VERSION}"
 
       - name: Fix maintainer script permissions (best-effort)
         run: |
-          chmod 0755 stable/DEBIAN/postinst || true
-          chmod 0755 stable/DEBIAN/postrm  || true
-          chmod 0755 stable/DEBIAN/preinst || true
-          chmod 0755 stable/DEBIAN/prerm  || true
+          set -euo pipefail
+          for pkg in (legacy native); do
+            test -d "$pkg/DEBIAN" || continue
+            test -f "$pkg/DEBIAN/postinst" && chmod 0755 "$pkg/DEBIAN/postinst" || true
+            test -f "$pkg/DEBIAN/postrm"  && chmod 0755 "$pkg/DEBIAN/postrm"  || true
+            test -f "$pkg/DEBIAN/preinst" && chmod 0755 "$pkg/DEBIAN/preinst" || true
+            test -f "$pkg/DEBIAN/prerm"  && chmod 0755 "$pkg/DEBIAN/prerm"  || true
+          done  
 
       - name: Update DEBIAN/control with version
         run: |
           set -euo pipefail
-          test -f stable/DEBIAN/control
-          tmpfile=$(mktemp)
-          sed "s/^Version:.*/Version: ${FULL_VERSION}/" stable/DEBIAN/control > "$tmpfile"
-          mv "$tmpfile" stable/DEBIAN/control
+          for pkg in (legacy native); do
+            test -d "$pkg/DEBIAN" || continue
+            test -f "$pkg/DEBIAN/control" || (echo "Missing $pkg/DEBIAN/control" >&2; exit 1)
+            tmpfile=$(mktemp)
+            sed "s/^Version:.*/Version: ${FULL_VERSION}/" $pkg/DEBIAN/control > "$tmpfile"
+            mv "$tmpfile" $pkg/DEBIAN/control
+            test -f $pkg/DEBIAN/control
+          done
 
-      - name: Build .deb package
+      - name: Build legacy .deb package
         run: |
           set -euo pipefail
-          mkdir -p dist
-          fakeroot dpkg-deb --build --root-owner-group stable "dist/${TARGET_NAME}_${FULL_VERSION}_all.deb"
-          dpkg-deb --info "dist/${TARGET_NAME}_${FULL_VERSION}_all.deb"
-          dpkg-deb --contents "dist/${TARGET_NAME}_${FULL_VERSION}_all.deb" | head -n 20
+          mkdir -p legacy
+          fakeroot dpkg-deb --build --root-owner-group legacy "legacy/${TARGET_NAME}_${FULL_VERSION}_all.deb"
+          dpkg-deb --info "legacy/${TARGET_NAME}_${FULL_VERSION}_all.deb"
+          dpkg-deb --contents "legacy/${TARGET_NAME}_${FULL_VERSION}_all.deb" | head -n 20
+
+      - name: Build native .deb package
+        run: |
+          set -euo pipefail
+          mkdir -p native/usr/share/perl5/PVE/Storage/Custom
+          cp -r source/perl5/PVE/Storage/Custom/TrueNAS.pm native/usr/share/perl5/PVE/Storage/Custom/TrueNAS.pm
+          mkdir -p native/usr/share/perl5/TrueNAS
+          cp -r source/perl5/TrueNAS/* native/usr/share/perl5/TrueNAS/
+          fakeroot dpkg-deb --build --root-owner-group native "native/${TARGET_NAME}_${FULL_VERSION}_all.deb"
+          dpkg-deb --info "native/${TARGET_NAME}-native_${FULL_VERSION}_all.deb"
+          dpkg-deb --contents "native/${TARGET_NAME}-native_${FULL_VERSION}_all.deb" | head -n 20
 
       - name: Upload .deb to the tagged release
         env:
@@ -89,7 +115,11 @@ jobs:
         run: |
           set -euo pipefail
           gh release upload "${{ steps.version.outputs.TAG }}" \
-            "dist/${TARGET_NAME}_${FULL_VERSION}_all.deb" \
+            "legacy/${TARGET_NAME}_${FULL_VERSION}_all.deb" \
+            --repo "${{ env.TARGET_REPO }}" \
+            --clobber
+          gh release upload "${{ steps.version.outputs.TAG }}" \
+            "native/${TARGET_NAME}-native_${FULL_VERSION}_all.deb" \
             --repo "${{ env.TARGET_REPO }}" \
             --clobber
 
