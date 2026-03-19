@@ -42,10 +42,10 @@ jobs:
           sudo apt-get install -y dpkg dpkg-dev fakeroot
 
       - name: Checkout (APT repo)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Checkout (source repo)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: boomshankerx/proxmox-truenas
           path: source
@@ -133,10 +133,10 @@ jobs:
 
     steps:
       - name: Checkout (APT repo)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configure Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: Download .deb from tagged release
         env:
