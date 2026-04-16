@@ -154,36 +154,81 @@ jobs:
             --pattern "*.deb" \
             --dir artifacts
           ls -l artifacts
+      - name: Import GPG signing key
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.SIGNING_KEY }}" | gpg --batch --import
+          # Trust the imported key ultimately
+          GPG_KEY_FP=$(gpg --list-secret-keys --with-colons 2>/dev/null \
+            | awk -F: '/^fpr:/ {print $10; exit}')
+          echo "${GPG_KEY_FP}:6:" | gpg --import-ownertrust
 
-      - name: Build (bookworm)
-        id: bookworm
-        uses: morph027/apt-repo-action@v3.7
-        with:
-          repo-name: ${{ env.REPO_NAME }}
-          scan-dir: artifacts
-          codename: bookworm
-          components: ${{ env.COMPONENTS }}
-          architectures: ${{ env.ARCHES }}
-          signing-key: ${{ secrets.SIGNING_KEY }}
+          GPG_KEY_ID=$(gpg --list-secret-keys --keyid-format long 2>/dev/null \
+            | grep '^sec' | head -1 | awk '{print $2}' | cut -d'/' -f2)
+          echo "GPG_KEY_ID=${GPG_KEY_ID}" >> "$GITHUB_ENV"
+          echo "Imported signing key: \`${GPG_KEY_ID}\`" >> "$GITHUB_STEP_SUMMARY"
+      
+      - name: Build APT repo
+        run: |
+          set -euo pipefail
 
-      - name: Build (trixie)
-        id: trixie
-        uses: morph027/apt-repo-action@v3.7
-        with:
-          repo-name: ${{ env.REPO_NAME }}
-          scan-dir: artifacts
-          codename: trixie
-          components: ${{ env.COMPONENTS }}
-          architectures: ${{ env.ARCHES }}
-          signing-key: ${{ secrets.SIGNING_KEY }}
+          REPO_BASE="repo"
+          mkdir -p "${REPO_BASE}/conf"
 
-      - name: Merge to single site/
+          # Generate reprepro distributions config for each codename
+          for CODENAME in bookworm trixie; do
+            cat >> "${REPO_BASE}/conf/distributions" <<EOF
+          Origin: ${REPO_NAME}
+          Label: ${REPO_NAME}
+          Suite: ${CODENAME}
+          Codename: ${CODENAME}
+          Components: ${COMPONENTS}
+          Architectures: ${ARCHES} source
+          SignWith: ${GPG_KEY_ID}
+          Description: ${REPO_NAME} APT repository
+
+          EOF
+          done
+
+          cat "${REPO_BASE}/conf/distributions"
+
+          # Include each .deb into each codename
+          for CODENAME in bookworm trixie; do
+            for deb in artifacts/*.deb; do
+              echo "Including $(basename "$deb") into ${CODENAME}..."
+              reprepro -b "${REPO_BASE}" -C "${COMPONENTS}" includedeb "${CODENAME}" "$deb"
+            done
+          done
+
+          # Show what ended up in the repo
+          echo "### APT repo contents" >> "$GITHUB_STEP_SUMMARY"
+          for CODENAME in bookworm trixie; do
+            echo "#### ${CODENAME}" >> "$GITHUB_STEP_SUMMARY"
+            reprepro -b "${REPO_BASE}" list "${CODENAME}" | while IFS= read -r line; do
+              echo "- \`${line}\`" >> "$GITHUB_STEP_SUMMARY"
+            done
+          done
+      - name: Export public key
+        run: |
+          gpg --armor --export "${GPG_KEY_ID}" > repo/public.key
+ 
+      - name: Assemble site
         run: |
           set -euo pipefail
           mkdir -p site
-          rsync -a "${{ steps.bookworm.outputs.dir }}/" site/
-          rsync -a "${{ steps.trixie.outputs.dir }}/"  site/
-          if [ -d static ]; then cp -r static/* site/; fi
+ 
+          # Copy reprepro output (dists/ and pool/)
+          cp -r repo/dists site/
+          cp -r repo/pool site/
+          cp repo/public.key site/
+ 
+          # Copy static assets (index.html, gpg.key, .nojekyll, etc.)
+          [ -d static ] && cp -r static/* site/ || true
+ 
+          echo "### Site contents" >> "$GITHUB_STEP_SUMMARY"
+          find site -type f | sort | while IFS= read -r f; do
+            echo "- \`${f}\`" >> "$GITHUB_STEP_SUMMARY"
+          done
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
