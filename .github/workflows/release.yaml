@@ -101,7 +101,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p native/usr/share/perl5/PVE/Storage/Custom
-          cp -r source/perl5/PVE/Storage/Custom/TrueNASPlugin.pm native/usr/share/perl5/PVE/Storage/Custom/TrueNASPlugin.pm
+          cp -r source/perl5/PVE/Storage/Custom/TrueNASNativePlugin.pm native/usr/share/perl5/PVE/Storage/Custom/TrueNASNativePlugin.pm
           mkdir -p native/usr/share/perl5/TrueNAS
           cp -r source/perl5/TrueNAS/* native/usr/share/perl5/TrueNAS/
           dpkg-deb --build --root-owner-group native "${TARGET_NAME}-native_${FULL_VERSION}_all.deb"
